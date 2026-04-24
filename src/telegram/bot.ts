@@ -6,7 +6,7 @@ import { SearcharvesterClient } from "../research/searcharvester-client.js";
 import { ReportStore } from "../storage/report-store.js";
 import { SessionStore } from "../storage/session-store.js";
 import { createAllowlistMiddleware } from "./auth.js";
-import { registerHandlers } from "./handlers.js";
+import { registerHandlers, resumeActiveJobDelivery } from "./handlers.js";
 
 export function createHermioneBot(config: AppConfig): Bot {
   const bot = new Bot(config.telegramBotToken);
@@ -24,11 +24,22 @@ export function createHermioneBot(config: AppConfig): Bot {
     timeoutMs: config.researchDefaultTimeoutMs,
     pollIntervalMs: config.researchPollIntervalMs,
     maxParallelJobs: config.researchMaxParallelJobs,
+    qualityGate: {
+      enabled: config.researchQualityGateEnabled,
+      maxAutoContinuations: config.researchMaxAutoContinuations
+    },
     autoRun: false
   });
 
   bot.use(createAllowlistMiddleware(config.allowedTelegramUserIds));
   registerHandlers({ bot, config, jobManager });
+  void resumeActiveJobDelivery({
+    jobManager,
+    sendMessage: (chatId, text) => bot.api.sendMessage(chatId, text),
+    chunkLimit: config.telegramMessageChunkLimit,
+    maxDirectReportChars: config.telegramMaxDirectReportChars,
+    pollIntervalMs: config.researchPollIntervalMs
+  });
 
   return bot;
 }

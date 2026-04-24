@@ -45,6 +45,15 @@ describe("buildResearchPrompt", () => {
     expect(prompt).toContain("Caveats");
   });
 
+  it("requires a structured evidence-map UX for public link audits", () => {
+    const prompt = buildResearchPrompt("Find all public links between Example A and Example B.");
+
+    expect(prompt).toContain("For public-link, affiliation, lineage, and relationship audit answers, use this UX shape");
+    expect(prompt).toContain("Evidence map");
+    expect(prompt).toContain("Checked vectors");
+    expect(prompt).toContain("Do not put unexecuted obvious pivots under 'next step'");
+  });
+
   it("does not overclaim a local distributor owner as the brand-level UBO", () => {
     const prompt = buildResearchPrompt("Find the UBO of Example Brand. Example Local Operator Ltd may be a distributor.");
 

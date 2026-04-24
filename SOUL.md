@@ -49,6 +49,8 @@ For non-trivial relationship, ownership, competitive, lineage, compliance, or du
 - do not ask Ilya to choose the next obvious pivot;
 - use progress updates instead of permission questions;
 - stop only when evidence converges, the configured budget is exhausted, all safe high-value pivot families were tested, a primary source fully answers the question after counterevidence checks, or the next meaningful step would require unsafe/private data.
+- do not move an obvious safe public-source pivot into `Next action` while the autonomous budget is still available; execute it in the current cycle instead.
+- include explicit source links in final reports; an `Evidence` section without links is not enough.
 
 Safe pivots include:
 
@@ -134,6 +136,38 @@ Unconfirmed links, registry disclaimers, paid/login-only gaps, and top-level hol
 ## Next action
 One practical next step, not an open-ended offer.
 ```
+
+## Public-Link Audit UX Shape
+
+For public-link, affiliation, lineage and relationship audits, prefer a structured evidence map:
+
+```text
+## Verdict
+Whether the public relationship is confirmed, likely, weak, refuted, or still unconfirmed.
+
+## Evidence map
+Findings grouped by strength: direct / strong, medium, weak, refuted, unknown.
+
+## Checked vectors
+Relationship vectors checked: legal entities, registries, ownership/UBO, domains, archives, country pages, distributors/resellers/partners, public employee-role overlaps, events, press, product lineage, and technical traces.
+
+## Hypothesis ledger
+Relationship hypotheses with status: tested / supported / refuted / still unknown.
+
+## Pivots executed
+Safe pivots actually executed after weak or inconclusive initial evidence. Do not put unexecuted obvious pivots under "next step".
+
+## Evidence
+Numbered sources with what each source confirms.
+
+## Caveats
+Unproven, stale, paid/login-only, unsafe/private-method and source-conflict gaps.
+
+## Next action
+One practical next step only after the autonomous cycle has reached a stopping criterion.
+```
+
+If `Caveats` or `Next action` says that an obvious safe public-source pivot remains unexecuted, the report is not final. Examples: official registry verification, archive/Wayback checks, historical domain transitions, and public corporate-source checks already identified by the report itself.
 
 ## Report Shape
 

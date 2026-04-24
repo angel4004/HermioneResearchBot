@@ -7,6 +7,9 @@ HermioneResearchBot — отдельный Telegram-сервис для глуб
 - Node.js + TypeScript.
 - Telegram bot runtime: grammY.
 - Research backend: neighboring Searcharvester HTTP service via `SEARCHARVESTER_URL`.
+- Research quality gate: validates backend reports before sending them to Telegram.
+- Auto-continuation: can start a follow-up backend job when a report stops too early.
+- Restart resume: active Telegram jobs store chat metadata so delivery can continue after runtime restart.
 - Final reports: `data/reports`.
 - Session state: `data/sessions.json`.
 
@@ -41,6 +44,9 @@ cp .env.example .env
 TELEGRAM_BOT_TOKEN=
 ALLOWED_TELEGRAM_USER_IDS=
 SEARCHARVESTER_URL=http://127.0.0.1:8000
+RESEARCH_QUALITY_GATE_ENABLED=true
+RESEARCH_MAX_AUTO_CONTINUATIONS=4
+TELEGRAM_FREE_TEXT_RESEARCH_ENABLED=true
 ```
 
 4. Run checks:
@@ -66,7 +72,13 @@ Searcharvester must already be running as a neighboring HTTP service. Its code i
 - `/status` — show active or last completed job.
 - `/cancel` — cancel active job locally and through backend when supported.
 - `/continue` — continue from the last completed report and unresolved gaps.
+- `/sources` — show sources extracted from the last completed report.
+- `/brief` — show the stored brief and unresolved gaps from the last completed report.
+- `/history` — show recent stored reports from `data/reports/index.json`.
+- `/diagnostics` — show non-secret runtime diagnostics.
 - `/settings` — show non-secret runtime limits.
+
+Если `TELEGRAM_FREE_TEXT_RESEARCH_ENABLED=true`, обычное текстовое сообщение в Telegram тоже запускает research-задачу. Это основной UX для длинных исследовательских запросов; `/research` остается явной командой и fallback.
 
 ## Deploy
 

@@ -8,9 +8,20 @@
 ## Status
 
 - Дата фиксации: 2026-04-24.
-- Текущая папка пока может не быть Git-репозиторием.
-- Код runtime еще не создан.
-- Первый исполнимый scope: Phase 0 + Phase 1.
+- Git-репозиторий и baseline runtime созданы локально.
+- Phase 0 + Phase 1 baseline реализованы локально.
+- Дополнительно начат Phase 4 slice: Hermione-side research quality gate и auto-continuation.
+- Дополнительно добавлен Telegram UX slice: обычное текстовое сообщение может
+  запускать research-задачу, а auto-continuation сообщения стали
+  пользовательскими, а не техническими.
+- Дополнительно начат Phase 3 slice: active job хранит Telegram chat metadata,
+  чтобы после restart Hermione могла продолжить polling и доставить результат.
+- Дополнительно продолжен Phase 4 slice: финальные markdown-отчеты
+  post-process-ятся в brief, sources и unresolved gaps; добавлены `/sources`
+  и `/brief`.
+- Дополнительно продолжен Phase 3 slice: добавлен `/diagnostics` с
+  non-secret runtime state.
+- Дополнительно начат Phase 6 slice: `data/reports/index.json` и `/history`.
 - Commit, push, PR, remote deploy и restart требуют отдельного явного
   подтверждения Ильи.
 
@@ -144,6 +155,10 @@ Backend должен быть заменяемым через adapter.
   - `/cancel`;
   - `/continue`;
   - `/settings`.
+- Free-text UX:
+  - обычное non-command сообщение запускает research-задачу, если включен
+    `TELEGRAM_FREE_TEXT_RESEARCH_ENABLED`;
+  - `/research` остается явной командой и fallback.
 - Searcharvester HTTP adapter:
   - create research job;
   - poll status;
@@ -235,7 +250,9 @@ Salamander.
 Цель: чтобы бот жил долго и падения были понятны.
 
 - Graceful shutdown.
-- Resume active jobs after restart.
+- Resume active jobs after restart. Первый slice реализован локально:
+  active job хранит Telegram chat id, startup runtime возобновляет polling и
+  доставку результата, если chat id доступен.
 - Stuck-job detection.
 - Retry policy for temporary backend failures.
 - Crash/error reports.
@@ -246,6 +263,8 @@ Salamander.
 - Backup recommendation for reports.
 - Rate limits and max parallel jobs.
 - Admin-only diagnostics command.
+  Первый локальный slice реализован как allowlist-protected `/diagnostics`
+  без вывода secrets.
 
 Результат: сервис можно сопровождать без ручного копания в случайных логах.
 
@@ -253,14 +272,21 @@ Salamander.
 
 Цель: улучшить качество результатов, а не только транспорт.
 
+- Hermione-side quality gate над отчетом:
+  - блокировать преждевременные "если хочешь, продолжу";
+  - требовать `Hypothesis ledger`, `Pivots executed`, `Evidence`, `Caveats`;
+  - автоматически запускать continuation job до лимита `RESEARCH_MAX_AUTO_CONTINUATIONS`;
+  - отправлять пользователю progress update вместо permission-вопроса.
 - Hermione post-processing над отчетом:
   - проверить наличие sources;
   - выделить TL;DR;
   - выделить unresolved gaps;
   - нормализовать формат.
 - `/continue` строит следующий цикл из gaps и уже использованных sources.
-- `/sources` показывает использованные источники.
-- `/brief` отправляет промежуточное summary.
+- `/sources` показывает использованные источники. Первый slice реализован
+  локально для последнего завершенного отчета.
+- `/brief` отправляет summary. Первый slice реализован локально для последнего
+  завершенного отчета и unresolved gaps.
 - Confidence и uncertainty форматируются единообразно.
 - Source quality policy:
   - primary sources предпочтительнее;
@@ -290,9 +316,10 @@ Salamander.
 Цель: превратить отчеты в удобный архив.
 
 - `/export` для markdown.
-- `/history` последних исследований.
+- `/history` последних исследований. Первый slice реализован локально.
 - `/report <id>` повторно отправляет отчет.
-- Индекс отчетов в `data/reports/index.json` или SQLite.
+- Индекс отчетов в `data/reports/index.json` или SQLite. Первый slice
+  реализован как `data/reports/index.json`.
 - Tags/title/slug для отчетов.
 - Поиск по локальным отчетам.
 - Продолжение исследования от конкретного прошлого отчета.

@@ -4,10 +4,10 @@
 !.env.example
 
 # Runtime state and private research outputs
-data/
-reports/
-sessions/
-jobs/
+/data/
+/reports/
+/sessions/
+/jobs/
 
 # Dependencies and build outputs
 node_modules/

@@ -3,6 +3,9 @@ export type ResearchCommandParseResult =
   | { ok: false; reason: "missing_question" };
 
 export type ContinueCommandParseResult = { ok: true; focus?: string | undefined };
+export type FreeTextResearchParseResult =
+  | { ok: true; question: string }
+  | { ok: false; reason: "not_free_text" };
 
 export function parseResearchCommand(text: string): ResearchCommandParseResult {
   const argument = parseCommandArgument(text, "research");
@@ -15,6 +18,14 @@ export function parseResearchCommand(text: string): ResearchCommandParseResult {
 export function parseContinueCommand(text: string): ContinueCommandParseResult {
   const focus = parseCommandArgument(text, "continue");
   return focus ? { ok: true, focus } : { ok: true, focus: undefined };
+}
+
+export function parseFreeTextResearchQuestion(text: string): FreeTextResearchParseResult {
+  const question = text.trim();
+  if (!question || question.startsWith("/")) {
+    return { ok: false, reason: "not_free_text" };
+  }
+  return { ok: true, question };
 }
 
 function parseCommandArgument(text: string, command: string): string | undefined {

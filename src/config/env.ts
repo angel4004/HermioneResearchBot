@@ -9,6 +9,9 @@ export interface AppConfig {
   researchDefaultTimeoutMs: number;
   researchPollIntervalMs: number;
   researchMaxParallelJobs: number;
+  researchQualityGateEnabled: boolean;
+  researchMaxAutoContinuations: number;
+  telegramFreeTextResearchEnabled: boolean;
   telegramMessageChunkLimit: number;
   telegramMaxDirectReportChars: number;
   reportOutputDir: string;
@@ -35,12 +38,47 @@ export function loadConfig(env: Record<string, string | undefined>): AppConfig {
     researchDefaultTimeoutMs: parsePositiveInteger(env, "RESEARCH_DEFAULT_TIMEOUT_SECONDS", 3600) * 1000,
     researchPollIntervalMs: parsePositiveInteger(env, "RESEARCH_POLL_INTERVAL_SECONDS", 5) * 1000,
     researchMaxParallelJobs: parsePositiveInteger(env, "RESEARCH_MAX_PARALLEL_JOBS", 1),
+    researchQualityGateEnabled: parseBoolean(env, "RESEARCH_QUALITY_GATE_ENABLED", true),
+    researchMaxAutoContinuations: parseNonNegativeInteger(env, "RESEARCH_MAX_AUTO_CONTINUATIONS", 4),
+    telegramFreeTextResearchEnabled: parseBoolean(env, "TELEGRAM_FREE_TEXT_RESEARCH_ENABLED", true),
     telegramMessageChunkLimit: parsePositiveInteger(env, "TELEGRAM_MESSAGE_CHUNK_LIMIT", 3900),
     telegramMaxDirectReportChars: parsePositiveInteger(env, "TELEGRAM_MAX_DIRECT_REPORT_CHARS", 12_000),
     reportOutputDir: env.REPORT_OUTPUT_DIR?.trim() || "data/reports",
     envFilePath: firstNonEmpty(env.HERMIONE_ENV_PATH, env.ENV_FILE_PATH),
     serviceName: firstNonEmpty(env.HERMIONE_SERVICE_NAME, env.SERVICE_NAME)
   };
+}
+
+function parseBoolean(env: Record<string, string | undefined>, key: string, defaultValue: boolean): boolean {
+  const rawValue = env[key]?.trim().toLowerCase();
+  if (!rawValue) {
+    return defaultValue;
+  }
+
+  if (["true", "1", "yes", "on"].includes(rawValue)) {
+    return true;
+  }
+  if (["false", "0", "no", "off"].includes(rawValue)) {
+    return false;
+  }
+  throw new Error(`${key} must be a boolean`);
+}
+
+function parseNonNegativeInteger(
+  env: Record<string, string | undefined>,
+  key: string,
+  defaultValue: number
+): number {
+  const rawValue = env[key]?.trim();
+  if (!rawValue) {
+    return defaultValue;
+  }
+
+  const parsed = Number(rawValue);
+  if (!Number.isInteger(parsed) || parsed < 0) {
+    throw new Error(`${key} must be a non-negative integer`);
+  }
+  return parsed;
 }
 
 function requiredString(env: Record<string, string | undefined>, key: string): string {
