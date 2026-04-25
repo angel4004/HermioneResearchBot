@@ -4,6 +4,7 @@ import {
   buildQualityContinuationQuestion,
   evaluateResearchReport
 } from "../../src/research/quality-gate.js";
+import { buildResearchPrompt } from "../../src/research/policy.js";
 
 const completeReport = [
   "## Verdict",
@@ -190,7 +191,7 @@ describe("buildQualityContinuationQuestion", () => {
     expect(question).toContain("Pivots executed");
   });
 
-  it("keeps the tail of long previous reports because caveats and next action are usually there", () => {
+  it("keeps actionable caveat and next-action hints without copying the whole previous report", () => {
     const longBody = "A".repeat(5000);
 
     const question = buildQualityContinuationQuestion({
@@ -211,8 +212,39 @@ describe("buildQualityContinuationQuestion", () => {
       ]
     });
 
-    expect(question).toContain("[previous report middle truncated]");
+    expect(question).not.toContain("[previous report middle truncated]");
+    expect(question).not.toContain(longBody);
     expect(question).toContain("TravelLine OÜ пока не верифицирована");
     expect(question).toContain("Проверить официальную карточку TravelLine OÜ");
+  });
+
+  it("does not leak rejected report continuation offers into the next backend prompt", () => {
+    const longBody = "A".repeat(5000);
+    const question = buildQualityContinuationQuestion({
+      originalQuestion: "Find public links between TravelLine and Exely.",
+      previousReportMarkdown: [
+        "## Verdict",
+        "The current answer is incomplete.",
+        longBody,
+        "## Caveats",
+        "TravelLine OÜ пока не верифицирована через официальный registry card.",
+        "## Next action",
+        "If you have a particular approach in mind, let me know and I’ll proceed accordingly."
+      ].join("\n"),
+      findings: [
+        {
+          code: "unexecuted_safe_pivot",
+          message: "Report leaves an obvious safe public-source pivot unexecuted."
+        }
+      ]
+    });
+
+    const backendPrompt = buildResearchPrompt(question, { timeBudgetMs: 3_600_000 });
+
+    expect(backendPrompt.length).toBeLessThanOrEqual(2000);
+    expect(backendPrompt).toContain("Find public links between TravelLine and Exely.");
+    expect(backendPrompt).toContain("unexecuted_safe_pivot");
+    expect(backendPrompt).toContain("TravelLine OÜ");
+    expect(backendPrompt).not.toMatch(/if you want|let me know|particular approach/iu);
   });
 });

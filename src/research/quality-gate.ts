@@ -48,6 +48,8 @@ const requiredSections: Array<{ code: QualityGateFindingCode; heading: string; m
 
 const continuationOfferPatterns = [
   /if you want[, ]+i (can|will|could) (continue|check|look|search|dig)/iu,
+  /if you have .{0,120}in mind.{0,120}let me know/iu,
+  /\blet me know.{0,120}\b(proceed|continue|check|research|dig)\b/iu,
   /\bi can keep (researching|checking|looking|searching|digging)/iu,
   /\bnext step[:\s-]+i (will|can) (continue|check|look|search|dig)/iu,
   /если хочешь[, ]+я (могу|буду)? ?(продолжу|продолжить|проверю|проверить|поищу|поискать|добью|сделаю)/iu,
@@ -123,45 +125,83 @@ function hasUnexecutedSafePivot(markdown: string): boolean {
 }
 
 export function buildQualityContinuationQuestion(input: BuildQualityContinuationQuestionInput): string {
+  const findingCodes = input.findings.map((finding) => finding.code).join(", ");
   const findingLines = input.findings.map((finding) => `- ${finding.code}: ${finding.message}`).join("\n");
-  const previousReportExcerpt = buildPreviousReportExcerpt(input.previousReportMarkdown);
+  const previousReportHints = buildPreviousReportHints(input.previousReportMarkdown);
 
   return [
     "Continue the same research task without asking the user for permission to continue.",
-    "",
-    `Original question: ${input.originalQuestion}`,
-    "",
-    "The previous report did not pass Hermione's research quality gate.",
-    "Quality gate findings:",
-    findingLines,
-    "",
-    "Required output for the continuation:",
-    "- Hypothesis ledger with tested / supported / refuted / still unknown status.",
-    "- Pivots executed across safe public-source pivot families.",
-    "- Execute obvious safe public-source pivots that the previous report left in Caveats or Next action.",
-    "- Evidence with source-backed claims and explicit source links.",
-    "- Caveats and remaining uncertainty.",
-    "- A final answer only if stopping criteria are met.",
-    "",
-    "Previous report:",
-    previousReportExcerpt
+    `Original question: ${trimEnd(input.originalQuestion, 260)}`,
+    `Quality gate findings: ${findingCodes}`,
+    "Required: Hypothesis ledger with tested / supported / refuted / still unknown status; Pivots executed; Evidence links; Caveats.",
+    "Execute missing safe public-source pivots before final; do not repeat continuation offers from the rejected draft.",
+    "Final answer only if stopping criteria are met.",
+    ...(previousReportHints
+      ? [
+          "Useful previous-draft gaps/pivots, not a final answer:",
+          previousReportHints
+        ]
+      : []),
+    "Finding details:",
+    findingLines
   ].join("\n");
 }
 
-function buildPreviousReportExcerpt(markdown: string): string {
-  const maxLength = 5000;
-  if (markdown.length <= maxLength) {
-    return markdown;
+function buildPreviousReportHints(markdown: string): string {
+  const selectedLines: string[] = [];
+  let inUsefulSection = false;
+
+  for (const rawLine of markdown.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    const heading = parseHeading(line);
+    if (heading) {
+      inUsefulSection = isUsefulPreviousReportSection(heading);
+      continue;
+    }
+
+    if (!inUsefulSection || isContinuationOffer(line)) {
+      continue;
+    }
+
+    selectedLines.push(line);
+    if (selectedLines.length >= 4) {
+      break;
+    }
   }
 
-  const edgeLength = Math.floor((maxLength - 40) / 2);
+  return trimEnd([...new Set(selectedLines)].join("\n"), 320);
+}
+
+function parseHeading(line: string): string | null {
+  const match = /^#{1,6}\s+(.+?)\s*$/u.exec(line);
+  return match?.[1]?.trim().toLowerCase() ?? null;
+}
+
+function isUsefulPreviousReportSection(heading: string): boolean {
   return [
-    markdown.slice(0, edgeLength),
-    "",
-    "[previous report middle truncated]",
-    "",
-    markdown.slice(-edgeLength)
-  ].join("\n");
+    "checked vectors",
+    "hypothesis ledger",
+    "pivots executed",
+    "caveats",
+    "next action",
+    "следующий шаг",
+    "оговорки"
+  ].includes(heading);
+}
+
+function isContinuationOffer(value: string): boolean {
+  return continuationOfferPatterns.some((pattern) => pattern.test(value));
+}
+
+function trimEnd(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return `${value.slice(0, Math.max(0, maxLength - 3)).trimEnd()}...`;
 }
 
 function hasSourceLink(markdown: string): boolean {
