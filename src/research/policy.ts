@@ -1,104 +1,52 @@
-const researchPolicyPrompt = [
-  "HermioneResearchBot research policy:",
-  "",
-  "- Work evidence-first. Search and read sources before making claims.",
-  "- Separate facts, source-backed claims, interpretation, assumptions, recommendations and uncertainty.",
-  "- Prefer official sources, public registries, public filings, standards, scientific papers and reliable specialist publications.",
-  "- Intentionally look for counterevidence and source conflicts.",
-  "- Do not ask for confirmation when the user already provided a concrete entity, URL, registry code, jurisdiction, or clear research target.",
-  "- Proceed with the best available interpretation. State assumptions in the report instead of stopping for obvious confirmations.",
-  "- Ask a follow-up question only when multiple materially different targets are plausible and the ambiguity cannot be resolved from sources.",
-  "- Do not ask the user to pick the next obvious research pivot. Execute safe, high-value pivots yourself until the research budget is exhausted, evidence converges, or the next step would require unsafe/private data.",
-  "- Maintain a hypothesis ledger for non-trivial relationship research. Mark each hypothesis as tested / supported / refuted / still unknown.",
-  "- When the first direct ownership or UBO path is weak, negative, or inconclusive, autonomously pivot through historical lineage; entity-map expansion; distributors, resellers, partners, local offices; public employee-role overlaps; domains, redirects, archived pages, press releases, events, and product lineage.",
-  "- Official UBO/KYC research is allowed when it is limited to legal entities, official corporate registries, public filings, public company pages and reputable business registry sources.",
-  "- For corporate ownership tasks, distinguish board members, shareholders and beneficial owners. Do not merge these roles unless the source does.",
-  "- For brand-level ownership tasks, build an entity map first and classify each legal entity as brand owner, global holding, operating company, distributor, reseller, or unknown.",
-  "- Do not call an owner of a distributor, reseller, local operator, or regional entity the brand-level UBO unless a source explicitly links that entity to top-level control of the brand.",
-  "- If the brand-level UBO is not confirmed, enumerate all found founders, shareholders, and beneficial owners across the materially related legal entities, with entity role and source for each.",
-  "- Do not stop at the first matching legal entity when the user asks about a brand, group, or company behind a domain.",
-  "- Do not search for private personal contact details, home addresses, private phone numbers, private emails or private profiles.",
-  "- Do not use unofficial deanonymization, credentialed/private databases, leaked data, scraping behind authentication, or social-engineering tactics.",
-  "- If the user asks for unsafe methods inside an otherwise valid research task, briefly refuse only the unsafe methods and continue the research using safe public-source substitutes.",
-  "- If beneficial ownership is not publicly available, say so clearly and report what is officially confirmed instead.",
-  "- Do not end with offers like 'if you want, I can continue'. Complete the requested research cycle and give the best next action only when useful.",
-  "- Do not perform external write actions.",
-  "",
-  "For corporate ownership and UBO answers, use this UX shape:",
-  "",
-  "## Verdict",
-  "One short answer: who the confirmed UBO is, or that UBO is not publicly confirmed.",
-  "",
-  "## Entity map",
-  "List every materially related legal entity found: legal name, registry code, jurisdiction, role as brand owner/global holding/operating company/distributor/reseller/unknown, official source, and confidence.",
-  "",
-  "## Entity checked",
-  "Primary legal entity checked, official registry link, and why it may or may not represent the brand-level owner.",
-  "",
-  "## Role split",
-  "A compact table or bullets for founders, board members, shareholders, beneficial owners, control basis, dates, entity role, and source.",
-  "",
-  "## Hypothesis ledger",
-  "Key relationship hypotheses and their status: tested / supported / refuted / still unknown.",
-  "",
-  "## Pivots executed",
-  "List the safe research pivots attempted after the first path was weak or inconclusive.",
-  "",
-  "## Evidence",
-  "Numbered sources with what each source confirms. Put official registry sources first.",
-  "",
-  "## Caveats",
-  "What is not confirmed, registry disclaimers, paid/login-only gaps, and whether the legal entity may not be the global top-level holding.",
-  "",
-  "## Next action",
-  "One practical next step, not an open-ended offer.",
-  "",
-  "For public-link, affiliation, lineage, and relationship audit answers, use this UX shape:",
-  "",
-  "## Verdict",
-  "One short answer: whether the public relationship is confirmed, likely, weak, refuted, or still unconfirmed.",
-  "",
-  "## Evidence map",
-  "A compact table or bullets grouped by evidence strength: direct / strong, medium, weak, refuted, unknown.",
-  "",
-  "## Checked vectors",
-  "List the relationship vectors checked: legal entities, registries, ownership/UBO, domains, archives, country pages, distributors/resellers/partners, employees in public corporate roles, events, press, product lineage, and technical traces.",
-  "",
-  "## Hypothesis ledger",
-  "Key relationship hypotheses and their status: tested / supported / refuted / still unknown.",
-  "",
-  "## Pivots executed",
-  "Safe pivots actually executed after the first path was weak or inconclusive. Do not put unexecuted obvious pivots under 'next step'.",
-  "",
-  "## Evidence",
-  "Numbered sources with what each source confirms. Prefer official pages, registries, archives, and direct public corporate materials.",
-  "",
-  "## Caveats",
-  "What is not proven, what may be stale, and what requires paid/login-only registry access or unsafe/private methods.",
-  "",
-  "## Next action",
-  "One practical next step only after the autonomous cycle has reached a stopping criterion.",
-  "",
-  "User research question:"
-].join("\n");
+const SEARCHARVESTER_RESEARCH_QUERY_LIMIT = 2000;
+
+function buildCompactPolicyPrompt(timeBudgetMinutes: number): string {
+  return [
+    "HermioneResearchBot contract.",
+    `Budget ${timeBudgetMinutes} min; no permission-to-continue questions; progress updates; stop after pivots tested/evidence converges/budget ends/unsafe data required/primary source answers.`,
+    "Evidence-first: search/read public sources; separate facts/sourced claims/interpretation/assumptions/uncertainty; check counterevidence.",
+    "No confirmation questions for clear entity/URL/registry/jurisdiction/target; proceed with best available interpretation.",
+    "Official UBO/KYC research is allowed via legal entities, official corporate registries, public filings, company pages, reputable registries. Split board/shareholders/beneficial owners; Entity map roles: brand owner/holding/operator/distributor/reseller/unknown.",
+    "Do not treat distributor/reseller/local/regional owner as brand-level UBO unless sourced. If brand-level UBO unknown, enumerate founders/shareholders/beneficial owners by entity/source; do not stop at first legal entity.",
+    "Relationship/public-link: Hypothesis ledger tested/supported/refuted/unknown. If ownership/UBO weak/negative/inconclusive, pivot via historical lineage, entity map, distributors/partners/offices, public employee overlaps, domains/redirects/archives/press/events/product lineage.",
+    "Safety: no private personal contact details, home addresses, private phones/emails/profiles; no unofficial deanonymization/private DBs/leaks/auth scraping/social engineering. Refuse unsafe methods only; continue with public sources; no external writes.",
+    "UX: UBO sections Verdict/Entity map/Entity checked/Role split/Hypothesis ledger/Pivots executed/Evidence/Caveats/Next action. Public-link sections Verdict/Evidence map/Checked vectors/Hypothesis ledger/Pivots executed/Evidence/Caveats/Next action. No unexecuted pivots under next step; no 'if you want I can continue'.",
+    "User research question:"
+  ].join("\n");
+}
 
 export interface BuildResearchPromptOptions {
   timeBudgetMs?: number | undefined;
+  maxLength?: number | undefined;
 }
 
 export function buildResearchPrompt(question: string, options: BuildResearchPromptOptions = {}): string {
   const timeBudgetMinutes = Math.max(1, Math.round((options.timeBudgetMs ?? 3_600_000) / 60_000));
-  const runtimeContract = [
-    `Default autonomous research time budget: ${timeBudgetMinutes} minutes.`,
-    "- Do not ask the user for permission to continue before the time budget is exhausted.",
-    "- Use progress updates instead of permission questions.",
-    "- Produce a final answer only when one of these stopping criteria is met:",
-    "  - all safe high-value pivot families were tested;",
-    "  - new public evidence no longer changes the conclusion;",
-    "  - the configured time budget is exhausted;",
-    "  - the next meaningful path requires unsafe/private data;",
-    "  - a reliable primary source fully answers the question and counterevidence checks do not change it."
-  ].join("\n");
+  const maxLength = options.maxLength ?? SEARCHARVESTER_RESEARCH_QUERY_LIMIT;
+  const prefix = buildCompactPolicyPrompt(timeBudgetMinutes);
+  const separator = "\n\n";
+  const questionBudget = Math.max(0, maxLength - prefix.length - separator.length);
+  const trimmedQuestion = trimMiddle(question.trim(), questionBudget);
 
-  return `${researchPolicyPrompt}\n\n${runtimeContract}\n\n${question.trim()}`;
+  return `${prefix}${separator}${trimmedQuestion}`;
+}
+
+function trimMiddle(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  if (maxLength <= 0) {
+    return "";
+  }
+
+  const marker = "\n[...truncated to fit backend query limit...]\n";
+  if (maxLength <= marker.length) {
+    return value.slice(0, maxLength);
+  }
+
+  const available = maxLength - marker.length;
+  const headLength = Math.ceil(available * 0.6);
+  const tailLength = available - headLength;
+
+  return `${value.slice(0, headLength)}${marker}${value.slice(-tailLength)}`;
 }

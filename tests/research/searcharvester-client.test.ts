@@ -33,8 +33,9 @@ describe("SearcharvesterClient", () => {
     const calls = fetchImpl.mock.calls as unknown as Array<[string, RequestInit]>;
     const requestBody = JSON.parse(calls[0]?.[1].body as string) as { query: string };
     expect(requestBody.query).toContain("Official UBO/KYC research is allowed");
-    expect(requestBody.query).toContain("Do not search for private personal contact details");
-    expect(requestBody.query).toContain("Default autonomous research time budget: 60 minutes");
+    expect(requestBody.query).toContain("no private personal contact details");
+    expect(requestBody.query).toContain("Budget 60 min");
+    expect(requestBody.query.length).toBeLessThanOrEqual(2000);
   });
 
   it("maps completed backend status and report fields", async () => {
