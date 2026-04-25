@@ -160,6 +160,22 @@ export class JobManager {
         };
       }
 
+      if (!qualityGateResult.passed) {
+        const failedJob: StoredJob = {
+          ...updatedJob,
+          status: "failed",
+          reportBrief: reportAnalysis.brief,
+          sources: mergeSources(snapshot.sources, reportAnalysis.sources),
+          unresolvedGaps: mergeStrings(snapshot.unresolvedGaps, reportAnalysis.unresolvedGaps),
+          qualityGatePassed: false,
+          qualityGateFindings: qualityGateResult.findings,
+          errorMessage:
+            "Исследование остановлено: backend не вернул отчет исследовательского качества, поэтому не отправляю черновик как финальный отчет."
+        };
+        await this.options.sessionStore.setLastCompletedJob(failedJob);
+        return { kind: "failed", job: failedJob };
+      }
+
       const reportPath = await this.options.reportStore.saveReport({
         jobId: activeJob.jobId,
         question: activeJob.question,

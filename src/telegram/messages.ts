@@ -1,4 +1,5 @@
 import type { AppConfig } from "../config/env.js";
+import type { QualityGateFinding, QualityGateFindingCode } from "../research/quality-gate.js";
 import type { ReportIndexEntry } from "../storage/report-store.js";
 import type { StoredJob } from "../storage/types.js";
 
@@ -35,8 +36,10 @@ export function formatSettings(config: AppConfig): string {
 
 export function formatResearchAccepted(jobId: string): string {
   return [
-    `Принял research-задачу: ${jobId}`,
-    "Буду работать автономно: искать, проверять источники и продолжать очевидные безопасные pivots без отдельных подтверждений."
+    "Задачу приняла. Начинаю исследование.",
+    "Что буду делать: искать публичные источники, проверять факты и сама переходить к следующим очевидным направлениям.",
+    "Напишу, когда появится важный прогресс, задача остановится по качеству/безопасности или будет готов отчет.",
+    `Технический id: ${jobId}`
   ].join("\n");
 }
 
@@ -134,13 +137,61 @@ export function formatHistory(entries: ReportIndexEntry[]): string {
 export function formatAutoContinuationStarted(input: {
   previousJobId: string;
   nextJobId: string;
-  findingsCount: number;
+  findings: QualityGateFinding[];
 }): string {
   return [
-    "Не отдаю промежуточный отчет как финальный.",
-    `Quality gate нашел недоработки: ${input.findingsCount}.`,
-    `Предыдущая задача: ${input.previousJobId}`,
-    `Продолжение: ${input.nextJobId}`,
-    "Продолжаю исследование сам, без запроса на следующий очевидный шаг."
+    "Промежуточный результат пока сырой, не отправляю его как финальный отчет.",
+    `Что не хватает: ${formatFindingSummary(input.findings)}.`,
+    "Продолжаю сама: доберу публичные подтверждения и проверю следующие безопасные направления."
   ].join("\n");
+}
+
+export function formatResearchCompleted(reportPath: string): string {
+  return `Исследование завершено. Отчет сохранен: ${reportPath}\nНиже отправляю отчет.`;
+}
+
+export function formatResearchFailed(job: StoredJob): string {
+  const reason = stripStoppedPrefix(job.errorMessage ?? "backend не вернул финальный отчет.");
+  return [
+    "Исследование остановлено без финального отчета.",
+    `Причина: ${reason}`,
+    job.qualityGateFindings?.length ? `Что не так: ${formatFindingSummary(job.qualityGateFindings)}.` : undefined,
+    `Технический id: ${job.jobId}`
+  ]
+    .filter((line): line is string => line !== undefined)
+    .join("\n");
+}
+
+function formatFindingSummary(findings: QualityGateFinding[]): string {
+  const labels = findings.map((finding) => qualityFindingLabel(finding.code));
+  const uniqueLabels = [...new Set(labels)];
+  if (uniqueLabels.length === 0) {
+    return "нужно больше проверок качества";
+  }
+  return uniqueLabels.join("; ");
+}
+
+function qualityFindingLabel(code: QualityGateFindingCode): string {
+  switch (code) {
+    case "backend_capability_missing":
+      return "исследовательский backend не смог запустить нужный research workflow";
+    case "missing_source_links":
+      return "ссылок на источники";
+    case "missing_hypothesis_ledger":
+      return "проверки гипотез";
+    case "missing_pivots_executed":
+      return "списка реально проверенных направлений";
+    case "missing_evidence":
+      return "evidence map с подтверждениями";
+    case "missing_caveats":
+      return "оговорок и оставшихся неопределенностей";
+    case "premature_continuation_offer":
+      return "результат слишком рано предложил продолжить вместо самостоятельной проверки";
+    case "unexecuted_safe_pivot":
+      return "остались очевидные безопасные направления поиска";
+  }
+}
+
+function stripStoppedPrefix(message: string): string {
+  return message.replace(/^Исследование остановлено:\s*/u, "");
 }

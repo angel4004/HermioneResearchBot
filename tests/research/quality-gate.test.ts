@@ -172,6 +172,21 @@ describe("evaluateResearchReport", () => {
       message: expect.stringContaining("source links")
     });
   });
+
+  it("fails a backend capability error instead of treating it as a research report", () => {
+    const result = evaluateResearchReport(
+      [
+        "The requested **`searcharvester-deep-research`** skill is not present in the current toolset.",
+        "I’m unable to run that workflow without the skill being installed or available."
+      ].join("\n")
+    );
+
+    expect(result.passed).toBe(false);
+    expect(result.findings).toContainEqual({
+      code: "backend_capability_missing",
+      message: expect.stringContaining("backend did not have the research capability")
+    });
+  });
 });
 
 describe("buildQualityContinuationQuestion", () => {

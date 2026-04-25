@@ -11,6 +11,8 @@ import {
   formatDiagnostics,
   formatHistory,
   formatLastJob,
+  formatResearchCompleted,
+  formatResearchFailed,
   formatResearchAccepted,
   formatSettings,
   formatSources,
@@ -200,7 +202,7 @@ async function deliverWhenFinished(
         formatAutoContinuationStarted({
           previousJobId: result.previousJob.jobId,
           nextJobId: result.job.jobId,
-          findingsCount: result.job.qualityGateFindings?.length ?? 0
+          findings: result.job.qualityGateFindings ?? []
         })
       );
       await new Promise((resolve) => setTimeout(resolve, options.pollIntervalMs));
@@ -208,7 +210,7 @@ async function deliverWhenFinished(
     }
 
     if (result.kind === "completed") {
-      await sendMessage(`Research completed. Report saved: ${result.reportPath}`);
+      await sendMessage(formatResearchCompleted(result.reportPath));
       if (result.reportMarkdown.length <= options.maxDirectReportChars) {
         for (const chunk of splitTelegramMessage(result.reportMarkdown, options.chunkLimit)) {
           await sendMessage(chunk);
@@ -220,7 +222,7 @@ async function deliverWhenFinished(
     }
 
     if (result.kind === "failed" || result.kind === "timeout") {
-      await sendMessage(result.job.errorMessage ?? "Research job failed.");
+      await sendMessage(formatResearchFailed(result.job));
       return;
     }
 

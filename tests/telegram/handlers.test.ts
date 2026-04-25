@@ -54,7 +54,7 @@ describe("resumeActiveJobDelivery", () => {
       },
       {
         chatId: 12345,
-        text: "Research completed. Report saved: data/reports/job-1.md"
+        text: "Исследование завершено. Отчет сохранен: data/reports/job-1.md\nНиже отправляю отчет."
       },
       {
         chatId: 12345,

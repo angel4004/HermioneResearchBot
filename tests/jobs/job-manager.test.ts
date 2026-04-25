@@ -347,4 +347,56 @@ describe("JobManager", () => {
     expect(sessionStore.state.activeJob?.jobId).toBe("job-2");
     expect(sessionStore.state.lastCompletedJob).toBeNull();
   });
+
+  it("fails low-quality final attempts after the continuation budget instead of saving them as final", async () => {
+    const badSnapshot = {
+      id: "job-1",
+      status: "completed",
+      reportMarkdown: [
+        "The requested **`searcharvester-deep-research`** skill is not present in the current toolset.",
+        "I’m unable to run that workflow without the skill being installed or available."
+      ].join("\n")
+    } satisfies ResearchJobSnapshot;
+    const backend: ResearchBackend = {
+      startResearch: vi.fn(),
+      getResearchJob: vi.fn(async () => badSnapshot)
+    };
+    const sessionStore = new MemorySessionStore();
+    await sessionStore.setActiveJob({
+      jobId: "job-1",
+      question: "Find public links between Company A and Company B.",
+      status: "running",
+      createdAt: "2026-04-24T10:00:00.000Z",
+      updatedAt: "2026-04-24T10:00:01.000Z",
+      continuationCount: 1
+    });
+    const reportStore = {
+      saveReport: vi.fn(async () => "data/reports/job-1.md")
+    } satisfies ReportStoreLike;
+    const manager = createManager({
+      backend,
+      sessionStore,
+      reportStore,
+      qualityGate: {
+        enabled: true,
+        maxAutoContinuations: 1
+      }
+    });
+
+    await expect(manager.pollActiveJobOnce()).resolves.toEqual({
+      kind: "failed",
+      job: expect.objectContaining({
+        jobId: "job-1",
+        status: "failed",
+        qualityGatePassed: false,
+        errorMessage: expect.stringContaining("не отправляю черновик как финальный отчет"),
+        qualityGateFindings: expect.arrayContaining([
+          expect.objectContaining({ code: "backend_capability_missing" })
+        ])
+      })
+    });
+    expect(reportStore.saveReport).not.toHaveBeenCalled();
+    expect(sessionStore.state.activeJob).toBeNull();
+    expect(sessionStore.state.lastCompletedJob?.status).toBe("failed");
+  });
 });

@@ -6,6 +6,7 @@ import {
   formatBrief,
   formatDiagnostics,
   formatHistory,
+  formatResearchFailed,
   formatResearchAccepted,
   formatSources,
   formatSettings,
@@ -32,8 +33,10 @@ describe("formatResearchAccepted", () => {
   it("explains autonomous research behavior for accepted jobs", () => {
     expect(formatResearchAccepted("job-1")).toBe(
       [
-        "Принял research-задачу: job-1",
-        "Буду работать автономно: искать, проверять источники и продолжать очевидные безопасные pivots без отдельных подтверждений."
+        "Задачу приняла. Начинаю исследование.",
+        "Что буду делать: искать публичные источники, проверять факты и сама переходить к следующим очевидным направлениям.",
+        "Напишу, когда появится важный прогресс, задача остановится по качеству/безопасности или будет готов отчет.",
+        "Технический id: job-1"
       ].join("\n")
     );
   });
@@ -193,15 +196,51 @@ describe("formatAutoContinuationStarted", () => {
       formatAutoContinuationStarted({
         previousJobId: "job-1",
         nextJobId: "job-2",
-        findingsCount: 3
+        findings: [
+          {
+            code: "missing_source_links",
+            message: "Report must include source links, not only narrative evidence."
+          },
+          {
+            code: "missing_pivots_executed",
+            message: "Report must show which safe research pivots were executed before stopping."
+          }
+        ]
       })
     ).toBe(
       [
-        "Не отдаю промежуточный отчет как финальный.",
-        "Quality gate нашел недоработки: 3.",
-        "Предыдущая задача: job-1",
-        "Продолжение: job-2",
-        "Продолжаю исследование сам, без запроса на следующий очевидный шаг."
+        "Промежуточный результат пока сырой, не отправляю его как финальный отчет.",
+        "Что не хватает: ссылок на источники; списка реально проверенных направлений.",
+        "Продолжаю сама: доберу публичные подтверждения и проверю следующие безопасные направления."
+      ].join("\n")
+    );
+  });
+});
+
+describe("formatResearchFailed", () => {
+  it("formats a human-readable stopped message without leaking backend output as final research", () => {
+    expect(
+      formatResearchFailed({
+        jobId: "job-1",
+        question: "question",
+        status: "failed",
+        createdAt: "2026-04-24T10:00:00.000Z",
+        updatedAt: "2026-04-24T10:01:00.000Z",
+        errorMessage:
+          "Исследование остановлено: backend не вернул отчет исследовательского качества, поэтому не отправляю черновик как финальный отчет.",
+        qualityGateFindings: [
+          {
+            code: "backend_capability_missing",
+            message: "The backend did not have the research capability it tried to call."
+          }
+        ]
+      })
+    ).toBe(
+      [
+        "Исследование остановлено без финального отчета.",
+        "Причина: backend не вернул отчет исследовательского качества, поэтому не отправляю черновик как финальный отчет.",
+        "Что не так: исследовательский backend не смог запустить нужный research workflow.",
+        "Технический id: job-1"
       ].join("\n")
     );
   });

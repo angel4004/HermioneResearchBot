@@ -1,6 +1,7 @@
 export type QualityGateFindingCode =
   | "premature_continuation_offer"
   | "unexecuted_safe_pivot"
+  | "backend_capability_missing"
   | "missing_source_links"
   | "missing_hypothesis_ledger"
   | "missing_pivots_executed"
@@ -72,8 +73,22 @@ const nextActionSafePivotPattern =
 
 const deferredSafePivotExclusionPattern = /after the next registry update|после следующ(его|ей) обновлен/iu;
 
+const backendCapabilityMissingPatterns = [
+  /searcharvester-(?:deep-research|search|extract).{0,200}(not present|missing|not available)/isu,
+  /(requested|needed).{0,120}skill.{0,120}(not present|missing|not available)/isu,
+  /unable to run.{0,160}workflow.{0,160}skill/isu
+];
+
 export function evaluateResearchReport(markdown: string): QualityGateResult {
   const findings: QualityGateFinding[] = [];
+
+  if (backendCapabilityMissingPatterns.some((pattern) => pattern.test(markdown))) {
+    findings.push({
+      code: "backend_capability_missing",
+      message:
+        "The backend did not have the research capability it tried to call, so this is an execution error rather than a research report."
+    });
+  }
 
   if (continuationOfferPatterns.some((pattern) => pattern.test(markdown))) {
     findings.push({
